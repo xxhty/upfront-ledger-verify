@@ -1,0 +1,59 @@
+# upfront-ledger-verify
+
+Check for yourself that [Upfront Investment](https://www.upfrontinvestment.com/track-record)
+hasn't rewritten its own stock-picking record.
+
+Every set of picks The Upfront Model publishes is recorded the day it goes out and given a
+SHA-256 fingerprint that also covers the fingerprint before it. The holdings open 30 days
+later. If any past entry were edited, its fingerprint would change, and so would every one
+after it. This script downloads the public ledger and does the arithmetic.
+
+```bash
+python3 verify.py
+```
+
+```
+Ledger rule: sha256(prev_sha256 + "\n" + payload), prev_sha256 = "" for the first entry
+Holdings open after 30 days
+
+  2026-09-18  85b606569556c4b3…   39 positions  sealed until 2026-10-18
+  2026-09-28  9f2b79858b08af4b…   39 positions  sealed until 2026-10-28
+
+OK: 2 entries, chain intact, 0 fingerprint(s) recomputed and matching.
+```
+
+What it checks:
+
+1. **The chain.** Each entry's `prev_sha256` equals the `sha256` of the entry before it.
+2. **The fingerprints.** For every entry whose holdings are open, it recomputes
+   `sha256(prev_sha256 + "\n" + payload)` from the published payload and compares it with the
+   published `sha256`.
+
+Entries that are still sealed can only be checked for the chain; their payload is published on
+the day they open. Save today's output and rerun after the reveal date, and you have the check
+end to end.
+
+## Do it by hand
+
+You don't need this script. The ledger is one JSON document:
+
+```
+https://www.upfrontinvestment.com/api/model/ledger
+```
+
+For an open entry, take `prev_sha256`, a newline, then `payload`, and hash the result with
+SHA-256. On a Mac:
+
+```bash
+printf '%s\n%s' "$PREV" "$PAYLOAD" | shasum -a 256
+```
+
+## Notes
+
+- Python 3, standard library only. Pass a file path to check a saved copy of the ledger.
+- The picks are the output of a statistical model and can be wrong. This repository is about
+  whether the record was tampered with, not about whether the picks were good. Past performance
+  does not guarantee future results, and nothing here is investment advice.
+- Method and scoring: https://www.upfrontinvestment.com/methodology
+
+MIT licence.
