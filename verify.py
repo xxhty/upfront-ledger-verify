@@ -29,8 +29,15 @@ def load(source):
     if source and source != "-":
         with open(source, encoding="utf-8") as f:
             return json.load(f)
-    with urllib.request.urlopen(LEDGER_URL, timeout=30) as r:
-        return json.load(r)
+    try:
+        with urllib.request.urlopen(LEDGER_URL, timeout=30) as r:
+            return json.load(r)
+    except urllib.error.URLError as e:
+        if "CERTIFICATE_VERIFY_FAILED" in str(e):
+            sys.exit("Your Python cannot verify HTTPS certificates (common with python.org builds on macOS).\n"
+                     f"Save the ledger with:  curl -s {LEDGER_URL} > ledger.json\n"
+                     "then run:              python3 verify.py ledger.json")
+        raise
 
 
 def sha256_hex(text):
@@ -42,12 +49,14 @@ def verify(ledger):
     problems = []
     prev = ""
     for i, e in enumerate(entries, 1):
+        # The API sends null for the first entry's prev_sha256; the hash rule treats it as "".
+        prev_field = e["prev_sha256"] or ""
         # 1. chain
-        if e["prev_sha256"] != prev:
+        if prev_field != prev:
             problems.append(f"entry {i} ({e['book_date']}): prev_sha256 does not match the previous entry")
         # 2. fingerprint, when the holdings are open
         if e.get("revealed"):
-            recomputed = sha256_hex(e["prev_sha256"] + "\n" + e["payload"])
+            recomputed = sha256_hex(prev_field + "\n" + e["payload"])
             if recomputed != e["sha256"]:
                 problems.append(f"entry {i} ({e['book_date']}): recomputed sha256 {recomputed[:16]}… "
                                 f"differs from the published {e['sha256'][:16]}…")

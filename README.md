@@ -18,8 +18,9 @@ Holdings open after 30 days
 
   2026-09-18  85b606569556c4b3…   39 positions  sealed until 2026-10-18
   2026-09-28  9f2b79858b08af4b…   39 positions  sealed until 2026-10-28
+  2026-09-30  a29200fc4b1b5f3a…   39 positions  sealed until 2026-10-30
 
-OK: 2 entries, chain intact, 0 fingerprint(s) recomputed and matching.
+OK: 3 entries, chain intact, 0 fingerprint(s) recomputed and matching.
 ```
 
 What it checks:
@@ -51,6 +52,8 @@ printf '%s\n%s' "$PREV" "$PAYLOAD" | shasum -a 256
 ## Notes
 
 - Python 3, standard library only. Pass a file path to check a saved copy of the ledger.
+- If your Python can't verify HTTPS certificates (python.org builds on macOS often can't until you run
+  `Install Certificates.command`), save the ledger with `curl` first; the script tells you how.
 - The picks are the output of a statistical model and can be wrong. This repository is about
   whether the record was tampered with, not about whether the picks were good. Past performance
   does not guarantee future results, and nothing here is investment advice.
