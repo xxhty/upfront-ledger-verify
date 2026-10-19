@@ -14,6 +14,7 @@ downloads the public ledger and checks two things, with nothing to trust but the
 Usage:
     python3 verify.py                 # checks the live ledger
     python3 verify.py ledger.json     # checks a saved copy (from /api/model/ledger)
+    python3 verify.py --repo          # also compares the live ledger with the copies in ledger/
 
 No dependencies beyond the Python standard library.
 """
@@ -64,8 +65,29 @@ def verify(ledger):
     return problems
 
 
+def compare_with_repo(ledger, folder="ledger"):
+    """Fingerprints in the live ledger must match the committed copies here, file by file."""
+    import os
+
+    problems = []
+    for e in ledger["entries"]:
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), folder, f"{e['book_date']}.json")
+        if not os.path.exists(path):
+            problems.append(f"{e['book_date']}: no copy in {folder}/ yet")
+            continue
+        with open(path, encoding="utf-8") as f:
+            copy = json.load(f)
+        for key in ("sha256", "prev_sha256"):
+            if copy.get(key) != e.get(key):
+                problems.append(f"{e['book_date']}: {key} differs between the live ledger and {folder}/")
+        if copy.get("payload") and e.get("payload") and copy["payload"] != e["payload"]:
+            problems.append(f"{e['book_date']}: payload differs between the live ledger and {folder}/")
+    return problems
+
+
 def main():
-    source = sys.argv[1] if len(sys.argv) > 1 else None
+    args = [a for a in sys.argv[1:] if a != "--repo"]
+    source = args[0] if args else None
     ledger = load(source)
     entries = ledger["entries"]
     print(f"Ledger rule: {ledger.get('hash_rule')}")
@@ -74,6 +96,8 @@ def main():
         state = "open, fingerprint recomputed" if e.get("revealed") else f"sealed until {e['reveals_on']}"
         print(f"  {e['book_date']}  {e['sha256'][:16]}…  {e['n_positions']:>3} positions  {state}")
     problems = verify(ledger)
+    if "--repo" in sys.argv:
+        problems += compare_with_repo(ledger)
     print()
     if problems:
         for p in problems:

@@ -34,6 +34,18 @@ Entries that are still sealed can only be checked for the chain; their payload i
 the day they open. Save today's output and rerun after the reveal date, and you have the check
 end to end.
 
+## The copy in this repository
+
+The site also commits the ledger here, in `ledger/`, once a day after the day's picks are recorded:
+
+- `ledger/<date>.json`: one entry, in the same form as the API. A sealed entry carries its
+  fingerprint; the day it opens, the same file gains the `payload` that was fingerprinted.
+- `ledger/index.json` and `ledger/HEAD`: every entry's fingerprint, and the newest one.
+
+Each commit carries GitHub's own timestamp, so the history of this repository is a second record
+of when each fingerprint existed, kept somewhere we don't operate. `python3 verify.py --repo`
+checks the live ledger against these files as well as checking the chain.
+
 ## Do it by hand
 
 You don't need this script. The ledger is one JSON document:
